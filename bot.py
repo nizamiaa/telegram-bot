@@ -3,66 +3,51 @@ from telegram.ext import Application, MessageHandler, CommandHandler, filters, C
 import yt_dlp
 import os
 
+import os
 TOKEN = os.getenv("TOKEN")
-
 
 # /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Salam 👋\n\nMənə TikTok, Instagram və ya YouTube linki göndər 🙂"
+        "Salam 👋\n\nMənə TikTok və ya Instagram video linki göndər 🙂"
     )
-
 
 # main handler
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
 
+    # ❗ link yoxlaması
     if not url.startswith("http"):
         await update.message.reply_text("❌ Zəhmət olmasa düzgün link göndər")
         return
 
     await update.message.reply_text("⏳ Video yüklənir...")
 
-    ydl_opts = {
-        "outtmpl": "video.%(ext)s",
-        "format": "bv*+ba/best/best[ext=mp4]",
-        "noplaylist": True,
-        "quiet": True,
-        # əgər cookies işlətmək istəyirsənsə aç:
-        # "cookiefile": "cookies.txt",
-    }
-
     try:
+        ydl_opts = {
+    	"outtmpl": "video.%(ext)s",
+    	"cookiefile": "cookies.txt",
+    	"format": "best",
+    	"noplaylist": True
+	}
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.extract_info(url, download=True)
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
 
-        # faylı tap
-        filename = None
-        for f in os.listdir():
-            if f.startswith("video"):
-                filename = f
-                break
-
-        if not filename:
-            await update.message.reply_text("❌ Video tapılmadı (private və ya login tələb edir)")
-            return
-
-        # video göndər (əgər böyükdürsə document kimi göndər)
+        # video göndər
         with open(filename, "rb") as video:
-            try:
-                await update.message.reply_video(video=video)
-            except:
-                video.seek(0)
-                await update.message.reply_document(document=video)
+            await update.message.reply_video(video=video)
 
+        # faylı sil
         os.remove(filename)
 
     except Exception as e:
         error_text = str(e)
 
-        if "No video formats found" in error_text:
+        if "empty media response" in error_text:
             await update.message.reply_text(
-                "⚠️ Bu video private-dir və ya login tələb edir."
+                "⚠️ Bu video yalnız login ilə açılır və ya private-dir."
             )
         else:
             await update.message.reply_text(f"❌ Xəta: {error_text}")
