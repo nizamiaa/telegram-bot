@@ -33,7 +33,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
+            filename = None
+			for f in os.listdir():
+    			if f.startswith("video"):
+        			filename = f
+        			break
 
         # video göndər
         with open(filename, "rb") as video:
